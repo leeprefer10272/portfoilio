@@ -1,0 +1,753 @@
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform, useInView } from "framer-motion";
+
+/* ─────────────────────────── DATA ─────────────────────────── */
+
+const PROJECTS = [
+  {
+    id: "shooting",
+    index: "01",
+    title: "Shooting Game",
+    url: "https://shooting12345678.kro.kr",
+    subtitle: "Browser-based Arcade Shooter",
+    desc: "키보드와 마우스로 조작하는 브라우저 슈팅 게임. 적 AI 패턴, 파티클 이펙트, 스코어 시스템을 순수 JavaScript로 구현.",
+    tags: ["JavaScript", "Canvas API", "Game Logic"],
+    img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&q=80",
+  },
+  {
+    id: "3dgame",
+    index: "02",
+    title: "3D Game",
+    url: "https://3d게임.kro.kr",
+    subtitle: "Three.js 3D Web Experience",
+    desc: "Three.js 기반 3D 인터랙티브 게임. 모바일 성능 최적화를 위한 Canvas 2D 폴백 렌더러 구현 및 레벨 디자인.",
+    tags: ["Three.js", "WebGL", "Performance"],
+    img: "https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=800&q=80",
+  },
+  {
+    id: "dfsbfs",
+    index: "03",
+    title: "DFS / BFS Visualizer",
+    url: "https://dfsbfstest2.kro.kr",
+    subtitle: "Algorithm Visualization Tool",
+    desc: "깊이 우선 탐색과 너비 우선 탐색 알고리즘을 실시간으로 시각화하는 개발 학습 도구. 그래프 직접 편집 및 속도 조절 기능.",
+    tags: ["Algorithm", "Visualization", "React"],
+    img: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80",
+  },
+];
+
+const TIMELINE = [
+  { period: "2026.05", items: ["cybervoid.kro.kr", "newgame12345678.kro.kr", "shooting12345678.kro.kr", "용돈을주세요깁미더머니.kro.kr"] },
+  { period: "2026.04", items: ["바운싱볼아카이브.kro.kr", "bbac.kro.kr", "rythm리듬.kro.kr", "미니게임minigame.kro.kr", "receiptscanner.kro.kr", "urlviewertool.kro.kr", "dfsbfstest.kro.kr", "dfsbfstest2.kro.kr"] },
+  { period: "2026.03", items: ["웹사이트카피툴.kro.kr", "아스키코드.kro.kr"] },
+  { period: "2026.01", items: ["리듬게임맞음.kro.kr", "ai게임.온라인.한국", "ai가만든재밌는게임.kro.kr", "슈퍼브레이크.kro.kr", "변신타읽.kro.kr", "클리커게임.kro.kr", "던전어드벤처.kro.kr", "rpgtrue.kro.kr", "주식오르길기원하며만든주식예측.kro.kr", "꿟.kro.kr"] },
+  { period: "2025.12", items: ["lshgame.kro.kr", "lshgravity.kro.kr", "3d게임.kro.kr", "테스트이선호.kro.kr ✕"] },
+  { period: "2025.11", items: ["jumpmaping.kro.kr", "gamecookie.kro.kr", "applesnake.kro.kr", "lpfr.kro.kr", "이건모를껄.kro.kr"] },
+  { period: "2025.10", items: ["야구게임이선호.kro.kr", "미로찾기이선호.kro.kr", "공량형게임이선호.kro.kr", "엄창난rpg.kro.kr", "이선호rpg.kro.kr"] },
+];
+
+const AWARDS = [
+  { title: "인공지능 데이터분석 청소년부 은상", org: "한국정보기술진흥원", date: "2025.09.25", type: "상장" },
+  { title: "북부수학영재 6학년 수료증", org: "부산광역시북부영재교육원", date: "2025.01.31", type: "수료증" },
+  { title: "DIAT GOLD MASTER", org: "한국정보통신진흥협회", date: "2024.09.30", type: "자격증" },
+  { title: "코딩창의개발능력 · 스크래치", org: "창의융합인재교육원", date: "2024.08.21", type: "자격증" },
+  { title: "제57회 과학의 날 상장", org: "과학기술정보통신부", date: "2024.04.22", type: "상장" },
+  { title: "북부수학영재 5학년 수료증", org: "부산광역시북부영재교육원", date: "2024.01.10", type: "수료증" },
+  { title: "부산수학문화관 체험수학캠프", org: "부산광역시교육청창의융합교육원", date: "2023.08.24", type: "수료증" },
+  { title: "로봇발명반", org: "부산광역시북부교육지원청교육장", date: "2022.12.14", type: "이수증" },
+  { title: "대학부설 과학영재교육원 공동온라인 선교육과정", org: "대학부설 과학영재교육원", date: "2022.08.13", type: "이수증" },
+  { title: "초등발명초급과정", org: "부산광역시북부교육지원청교육장", date: "2022.07.11", type: "이수증" },
+];
+
+const SKILLS = [
+  { label: "JavaScript / TypeScript", level: 85 },
+  { label: "React / Next.js", level: 82 },
+  { label: "Kotlin / Android", level: 80 },
+  { label: "Python / FastAPI", level: 78 },
+  { label: "Node.js", level: 75 },
+  { label: "Three.js / WebGL", level: 68 },
+];
+
+const TOTAL = TIMELINE.reduce((a, g) => a + g.items.length, 0);
+
+/* ─────────────────────────── HOOKS ─────────────────────────── */
+
+function useReveal(threshold = 0.15) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: threshold });
+  return [ref, inView];
+}
+
+/* ─────────────────────────── PRIMITIVES ─────────────────────── */
+
+// Staggered children reveal
+const Stagger = ({ children, delay = 0, stagger = 0.08, className = "" }) => (
+  <motion.div
+    className={className}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, amount: 0.1 }}
+    variants={{
+      hidden: {},
+      visible: { transition: { staggerChildren: stagger, delayChildren: delay } },
+    }}
+  >
+    {children}
+  </motion.div>
+);
+
+const FadeUp = ({ children, className = "", delay = 0, duration = 0.6 }) => (
+  <motion.div
+    className={className}
+    variants={{
+      hidden: { opacity: 0, y: 28 },
+      visible: { opacity: 1, y: 0, transition: { duration, delay, ease: [0.22, 1, 0.36, 1] } },
+    }}
+  >
+    {children}
+  </motion.div>
+);
+
+const FadeIn = ({ children, className = "", delay = 0 }) => (
+  <motion.div
+    className={className}
+    initial={{ opacity: 0 }}
+    whileInView={{ opacity: 1 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.7, delay, ease: "easeOut" }}
+  >
+    {children}
+  </motion.div>
+);
+
+// Thin horizontal rule that draws itself
+const DrawLine = ({ delay = 0 }) => (
+  <motion.div
+    className="h-px bg-zinc-200"
+    initial={{ scaleX: 0, originX: 0 }}
+    whileInView={{ scaleX: 1 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+  />
+);
+
+/* ─────────────────────────── NAV ─────────────────────────── */
+
+const NAV_ITEMS = ["Projects", "Timeline", "Skills", "Awards", "GitHub"];
+
+function Nav() {
+  const { scrollY } = useScroll();
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    return scrollY.on("change", v => setScrolled(v > 40));
+  }, [scrollY]);
+
+  const go = id => {
+    document.getElementById(id.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+    setOpen(false);
+  };
+
+  return (
+    <motion.header
+      className="fixed top-0 inset-x-0 z-50 transition-all"
+      style={{
+        backgroundColor: scrolled ? "rgba(255,255,255,0.96)" : "transparent",
+        backdropFilter: scrolled ? "blur(12px)" : "none",
+        borderBottom: scrolled ? "1px solid #e4e4e7" : "1px solid transparent",
+      }}
+    >
+      <div className="max-w-6xl mx-auto px-6 md:px-10 flex items-center justify-between h-14">
+        <button
+          className="font-black text-base tracking-tight text-zinc-900 hover:opacity-60 transition-opacity"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{ fontFamily: "'DM Mono', monospace" }}
+        >
+          LSH
+        </button>
+
+        <nav className="hidden md:flex items-center gap-8">
+          {NAV_ITEMS.map(n => (
+            <button
+              key={n}
+              onClick={() => go(n)}
+              className="text-xs font-semibold tracking-widest text-zinc-500 hover:text-zinc-900 transition-colors uppercase"
+            >
+              {n}
+            </button>
+          ))}
+        </nav>
+
+        <button className="md:hidden text-zinc-700" onClick={() => setOpen(v => !v)}>
+          <motion.div animate={{ rotate: open ? 45 : 0 }} className="w-5 h-px bg-current mb-1.5 block" />
+          <motion.div animate={{ opacity: open ? 0 : 1 }} className="w-5 h-px bg-current mb-1.5 block" />
+          <motion.div animate={{ rotate: open ? -45 : 0, y: open ? -10 : 0 }} className="w-5 h-px bg-current block" />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="md:hidden bg-white border-b border-zinc-200 px-6 pb-4"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {NAV_ITEMS.map(n => (
+              <button key={n} onClick={() => go(n)}
+                className="block py-3 text-sm font-semibold tracking-widest text-zinc-600 hover:text-zinc-900 uppercase w-full text-left">
+                {n}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
+  );
+}
+
+/* ─────────────────────────── HERO ─────────────────────────── */
+
+function Hero() {
+  return (
+    <section className="min-h-screen flex flex-col justify-end pb-16 px-6 md:px-10 pt-28 max-w-6xl mx-auto relative">
+      {/* large background number */}
+      <motion.div
+        className="absolute right-0 top-16 text-[22vw] font-black text-zinc-100 select-none pointer-events-none leading-none"
+        style={{ fontFamily: "'DM Mono', monospace" }}
+        initial={{ opacity: 0, x: 60 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        LSH
+      </motion.div>
+
+      <div className="relative z-10">
+        {/* tag line */}
+        <motion.p
+          className="text-xs font-semibold tracking-[0.3em] text-zinc-400 uppercase mb-8"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          Student Developer — Busan, KR
+        </motion.p>
+
+        {/* name */}
+        <div className="overflow-hidden mb-2">
+          <motion.h1
+            className="text-7xl md:text-9xl font-black text-zinc-900 leading-none tracking-tight"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            이선호
+          </motion.h1>
+        </div>
+        <div className="overflow-hidden mb-12">
+          <motion.h2
+            className="text-3xl md:text-5xl font-light text-zinc-400 tracking-tight"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            Lee Seonho
+          </motion.h2>
+        </div>
+
+        {/* stats row */}
+        <motion.div
+          className="flex flex-wrap gap-10 mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.55 }}
+        >
+          {[
+            { n: `${TOTAL}+`, label: "Web Projects" },
+            { n: "10", label: "Awards & Certs" },
+            { n: "7mo", label: "Streak" },
+          ].map(s => (
+            <div key={s.label}>
+              <div className="text-3xl md:text-4xl font-black text-zinc-900 tabular-nums"
+                style={{ fontFamily: "'DM Mono', monospace" }}>{s.n}</div>
+              <div className="text-xs tracking-widest text-zinc-400 uppercase mt-1">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+
+        <DrawLine />
+
+        {/* bottom row */}
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-center gap-4 pt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+        >
+          <p className="text-sm text-zinc-500 max-w-md leading-relaxed">
+            Android · Web · Creative Coding · Game Dev.<br />
+            카카오 루키 캠프 지원을 위한 포트폴리오입니다.
+          </p>
+          <div className="flex gap-3 sm:ml-auto">
+            <button
+              onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-5 py-2.5 bg-zinc-900 text-white text-xs font-semibold tracking-widest uppercase hover:bg-zinc-700 transition-colors"
+            >
+              View Work
+            </button>
+            <button
+              onClick={() => document.getElementById("awards")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-5 py-2.5 border border-zinc-300 text-zinc-700 text-xs font-semibold tracking-widest uppercase hover:border-zinc-700 transition-colors"
+            >
+              Awards
+            </button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* scroll indicator */}
+      <motion.div
+        className="absolute bottom-10 right-10 flex flex-col items-center gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+      >
+        <div className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase rotate-90 origin-center mb-4">Scroll</div>
+        <motion.div
+          className="w-px h-12 bg-zinc-300 origin-top"
+          animate={{ scaleY: [1, 0.3, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </motion.div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── PROJECTS ─────────────────────── */
+
+function Projects() {
+  const [active, setActive] = useState(null);
+
+  return (
+    <section id="projects" className="max-w-6xl mx-auto px-6 md:px-10 py-24">
+      <Stagger>
+        <FadeUp>
+          <div className="flex items-baseline gap-6 mb-2">
+            <span className="text-xs tracking-[0.3em] text-zinc-400 uppercase"
+              style={{ fontFamily: "'DM Mono', monospace" }}>Section 01</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-zinc-900 tracking-tight mb-1">Featured</h2>
+          <h2 className="text-4xl md:text-5xl font-black text-zinc-300 tracking-tight mb-12">Projects</h2>
+        </FadeUp>
+      </Stagger>
+
+      <div className="flex flex-col gap-0">
+        {PROJECTS.map((p, i) => (
+          <FadeIn key={p.id} delay={i * 0.1}>
+            <DrawLine />
+            <motion.div
+              className="group relative cursor-pointer"
+              onClick={() => setActive(active === p.id ? null : p.id)}
+              whileHover={{ backgroundColor: "#fafafa" }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="py-8 flex flex-col md:flex-row md:items-start gap-6">
+                {/* index */}
+                <span className="text-xs text-zinc-300 font-mono w-8 mt-1 flex-shrink-0">{p.index}</span>
+
+                {/* main content */}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                      <h3 className="text-xl md:text-2xl font-black text-zinc-900 tracking-tight group-hover:text-zinc-600 transition-colors">
+                        {p.title}
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-0.5">{p.subtitle}</p>
+                    </div>
+                    <motion.div
+                      className="flex-shrink-0 w-8 h-8 border border-zinc-200 flex items-center justify-center"
+                      animate={{ rotate: active === p.id ? 45 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M6 0v12M0 6h12" stroke="#a1a1aa" strokeWidth="1.5" />
+                      </svg>
+                    </motion.div>
+                  </div>
+
+                  {/* tags */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {p.tags.map(t => (
+                      <span key={t} className="text-[10px] tracking-widest font-semibold uppercase text-zinc-400 border border-zinc-200 px-2.5 py-1">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* expandable */}
+                  <AnimatePresence>
+                    {active === p.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col md:flex-row gap-6 pt-2 pb-4">
+                          {/* image */}
+                          <div className="md:w-64 h-40 md:h-36 overflow-hidden flex-shrink-0 bg-zinc-100">
+                            <img src={p.img} alt={p.title}
+                              className="w-full h-full object-cover grayscale opacity-80 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          {/* desc + link */}
+                          <div className="flex-1">
+                            <p className="text-sm text-zinc-600 leading-relaxed mb-4">{p.desc}</p>
+                            <a
+                              href={p.url} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-zinc-900 border-b border-zinc-900 pb-0.5 hover:opacity-50 transition-opacity"
+                              onClick={e => e.stopPropagation()}
+                            >
+                              Visit Site
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M1 9L9 1M9 1H3M9 1V7" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            </a>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          </FadeIn>
+        ))}
+        <FadeIn delay={0.3}><DrawLine /></FadeIn>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── TIMELINE ─────────────────────── */
+
+function Timeline() {
+  const [open, setOpen] = useState(null);
+  const total = TIMELINE.reduce((a, g) => a + g.items.length, 0);
+
+  return (
+    <section id="timeline" className="bg-zinc-950 text-white py-24 px-6 md:px-10">
+      <div className="max-w-6xl mx-auto">
+        <Stagger>
+          <FadeUp>
+            <span className="text-xs tracking-[0.3em] text-zinc-500 uppercase mb-2 block"
+              style={{ fontFamily: "'DM Mono', monospace" }}>Section 02</span>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-1">Project</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-zinc-600 tracking-tight mb-3">Timeline</h2>
+            <p className="text-sm text-zinc-500 mb-12">
+              2025.10 — 2026.05 &nbsp;·&nbsp; 총 <span className="text-white font-bold">{total}개</span> 프로젝트 배포
+            </p>
+          </FadeUp>
+        </Stagger>
+
+        <div className="flex flex-col">
+          {TIMELINE.map((g, gi) => (
+            <FadeIn key={g.period} delay={gi * 0.07}>
+              <div className="border-t border-zinc-800">
+                <button
+                  className="w-full text-left py-5 flex items-center gap-6 group"
+                  onClick={() => setOpen(open === gi ? null : gi)}
+                >
+                  {/* date */}
+                  <span className="text-xs text-zinc-500 w-16 flex-shrink-0 tabular-nums"
+                    style={{ fontFamily: "'DM Mono', monospace" }}>{g.period}</span>
+
+                  {/* count bar */}
+                  <div className="flex-1">
+                    <motion.div
+                      className="h-px bg-zinc-700 relative"
+                      whileInView={{ scaleX: 1 }}
+                      viewport={{ once: true }}
+                      initial={{ scaleX: 0 }}
+                      style={{ originX: 0 }}
+                      transition={{ duration: 0.7, delay: gi * 0.06 }}
+                    >
+                      <motion.div
+                        className="absolute left-0 top-0 h-px bg-white"
+                        whileInView={{ width: `${(g.items.length / 10) * 100}%` }}
+                        viewport={{ once: true }}
+                        initial={{ width: "0%" }}
+                        transition={{ duration: 0.7, delay: gi * 0.06 + 0.15 }}
+                      />
+                    </motion.div>
+                  </div>
+
+                  {/* count */}
+                  <span className="text-sm font-bold text-zinc-400 w-8 text-right tabular-nums">{g.items.length}</span>
+
+                  {/* chevron */}
+                  <motion.svg
+                    width="14" height="14" viewBox="0 0 14 14" fill="none"
+                    className="text-zinc-500 flex-shrink-0"
+                    animate={{ rotate: open === gi ? 180 : 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </motion.svg>
+                </button>
+
+                <AnimatePresence>
+                  {open === gi && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pl-22 pb-6 grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2"
+                        style={{ paddingLeft: "5.5rem" }}>
+                        {g.items.map((item, ii) => {
+                          const isDead = item.includes("✕");
+                          const name = item.replace(" ✕", "");
+                          return (
+                            <motion.a
+                              key={item}
+                              href={isDead ? undefined : `https://${name}`}
+                              target={isDead ? undefined : "_blank"}
+                              rel="noreferrer"
+                              initial={{ opacity: 0, x: -8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: ii * 0.03 }}
+                              className={`text-xs py-1.5 border-b border-zinc-800 flex items-center justify-between group/item ${isDead ? "cursor-default text-zinc-600" : "text-zinc-400 hover:text-white cursor-pointer"} transition-colors`}
+                            >
+                              <span className="truncate">{name}</span>
+                              {isDead
+                                ? <span className="text-zinc-700 ml-2 flex-shrink-0">offline</span>
+                                : <svg width="8" height="8" viewBox="0 0 8 8" fill="none" className="opacity-0 group-hover/item:opacity-100 flex-shrink-0 ml-2 transition-opacity">
+                                    <path d="M1 7L7 1M7 1H3M7 1V5" stroke="currentColor" strokeWidth="1.2" />
+                                  </svg>
+                              }
+                            </motion.a>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </FadeIn>
+          ))}
+          <div className="border-t border-zinc-800" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── SKILLS ─────────────────────────── */
+
+function Skills() {
+  return (
+    <section id="skills" className="max-w-6xl mx-auto px-6 md:px-10 py-24">
+      <Stagger>
+        <FadeUp>
+          <span className="text-xs tracking-[0.3em] text-zinc-400 uppercase mb-2 block"
+            style={{ fontFamily: "'DM Mono', monospace" }}>Section 03</span>
+          <h2 className="text-4xl md:text-5xl font-black text-zinc-900 tracking-tight mb-1">Technical</h2>
+          <h2 className="text-4xl md:text-5xl font-black text-zinc-200 tracking-tight mb-12">Skills</h2>
+        </FadeUp>
+      </Stagger>
+
+      <div className="grid md:grid-cols-2 gap-x-20 gap-y-0">
+        {SKILLS.map((s, i) => {
+          const [ref, inView] = useReveal();
+          return (
+            <div key={s.label} ref={ref}>
+              <DrawLine delay={i * 0.06} />
+              <div className="py-5 flex items-center gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-zinc-800">{s.label}</span>
+                    <span className="text-xs text-zinc-400 tabular-nums" style={{ fontFamily: "'DM Mono', monospace" }}>
+                      {s.level}
+                    </span>
+                  </div>
+                  <div className="h-0.5 bg-zinc-100 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-zinc-900"
+                      initial={{ width: 0 }}
+                      animate={inView ? { width: `${s.level}%` } : { width: 0 }}
+                      transition={{ duration: 1, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <DrawLine delay={0.5} />
+        <div className="md:hidden"><DrawLine delay={0.5} /></div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── AWARDS ─────────────────────────── */
+
+function Awards() {
+  const typeCounts = ["상장", "자격증", "수료증", "이수증"].map(t => ({
+    type: t,
+    count: AWARDS.filter(a => a.type === t).length,
+  }));
+
+  return (
+    <section id="awards" className="bg-zinc-50 py-24 px-6 md:px-10">
+      <div className="max-w-6xl mx-auto">
+        <Stagger>
+          <FadeUp>
+            <span className="text-xs tracking-[0.3em] text-zinc-400 uppercase mb-2 block"
+              style={{ fontFamily: "'DM Mono', monospace" }}>Section 04</span>
+            <h2 className="text-4xl md:text-5xl font-black text-zinc-900 tracking-tight mb-1">Awards &</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-zinc-300 tracking-tight mb-6">Certificates</h2>
+          </FadeUp>
+          <FadeUp delay={0.1}>
+            {/* type summary */}
+            <div className="flex gap-8 mb-14">
+              {typeCounts.map(({ type, count }) => (
+                <div key={type}>
+                  <div className="text-2xl font-black text-zinc-900 tabular-nums"
+                    style={{ fontFamily: "'DM Mono', monospace" }}>{count}</div>
+                  <div className="text-xs text-zinc-400 tracking-wider mt-0.5">{type}</div>
+                </div>
+              ))}
+            </div>
+          </FadeUp>
+        </Stagger>
+
+        <div className="flex flex-col">
+          {AWARDS.map((a, i) => (
+            <FadeIn key={a.title} delay={i * 0.05}>
+              <DrawLine />
+              <div className="py-5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                {/* date */}
+                <span className="text-xs text-zinc-400 tabular-nums w-24 flex-shrink-0"
+                  style={{ fontFamily: "'DM Mono', monospace" }}>{a.date}</span>
+                {/* type badge */}
+                <span className="text-[10px] font-semibold tracking-widest uppercase border border-zinc-200 px-2 py-0.5 text-zinc-500 flex-shrink-0 w-fit">
+                  {a.type}
+                </span>
+                {/* title */}
+                <span className="text-sm font-semibold text-zinc-800 flex-1">{a.title}</span>
+                {/* org */}
+                <span className="text-xs text-zinc-400 text-right">{a.org}</span>
+              </div>
+            </FadeIn>
+          ))}
+          <DrawLine delay={0.5} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── GITHUB ─────────────────────────── */
+
+function GitHub() {
+  return (
+    <section id="github" className="max-w-6xl mx-auto px-6 md:px-10 py-24">
+      <FadeUp>
+        <div className="flex flex-col md:flex-row md:items-end gap-10 md:gap-0">
+          <div className="flex-1">
+            <span className="text-xs tracking-[0.3em] text-zinc-400 uppercase mb-6 block"
+              style={{ fontFamily: "'DM Mono', monospace" }}>Section 05</span>
+            <h2 className="text-4xl md:text-6xl font-black text-zinc-900 tracking-tight leading-none mb-4">
+              More on<br />GitHub.
+            </h2>
+            <p className="text-sm text-zinc-500 max-w-sm leading-relaxed mb-8">
+              소스 코드, 실험 프로젝트, 그리고 앞으로의 작업들을 GitHub에서 확인할 수 있습니다.
+            </p>
+            <motion.a
+              href="https://github.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 text-xs font-semibold tracking-widest uppercase hover:bg-zinc-700 transition-colors"
+              whileHover={{ x: 4 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              Visit GitHub
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 11L11 1M11 1H4M11 1V8" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </motion.a>
+          </div>
+
+          {/* large decorative number */}
+          <div className="text-[12rem] font-black text-zinc-100 leading-none select-none text-right md:text-right flex-shrink-0"
+            style={{ fontFamily: "'DM Mono', monospace" }}>
+            GH
+          </div>
+        </div>
+      </FadeUp>
+    </section>
+  );
+}
+
+/* ─────────────────────────── APP ─────────────────────────── */
+
+export default function Portfolio() {
+  return (
+    <div className="bg-white min-h-screen" style={{ fontFamily: "'DM Sans', 'Pretendard', 'Noto Sans KR', sans-serif" }}>
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,900;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        /* custom scrollbar */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: #fff; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; }
+
+        /* cursor crosshair on interactive elements */
+        a, button { cursor: pointer; }
+
+        /* subtle grain overlay */
+        body::after {
+          content: '';
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 9999;
+          opacity: 0.025;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+          background-size: 200px 200px;
+        }
+      `}</style>
+
+      <Nav />
+      <Hero />
+      <Projects />
+      <Timeline />
+      <Skills />
+      <Awards />
+      <GitHub />
+
+      <footer className="border-t border-zinc-100 py-8 px-6 md:px-10">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span className="text-xs text-zinc-400 tracking-widest uppercase"
+            style={{ fontFamily: "'DM Mono', monospace" }}>
+            © 2026 이선호 · Lee Seonho
+          </span>
+          <span className="text-xs text-zinc-300 tracking-wider">
+            Portfolio for Kakao Rookie Camp
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
+}
